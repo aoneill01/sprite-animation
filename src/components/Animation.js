@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import "./Animation.css";
 
@@ -6,17 +6,21 @@ const startAddr = 2048;
 
 function Animation({ sprites }) {
   const [offset, setOffset] = useState(-1);
+  const timeline = useRef(null);
 
   useEffect(() => {
-    const tl = gsap.timeline({ yoyo: true, repeat: -1 });
-    tl.to({}, { duration: 0.5 });
+    const tl = gsap.timeline({ yoyo: true, repeat: 1 });
+    timeline.current = tl;
 
-    tl.addLabel("startPixels");
+    tl.to("#hex-0 text, #hex-1 text", { opacity: 1.0, duration: 0.2 }, 0);
+    tl.to("#binary text", { opacity: 1.0, duration: 0.2 }, 0);
+
+    tl.addLabel("startPixels", "+=0.2");
     tl.to(
       "#binary-0-1, #binary-1-1",
       {
         y: `+=${blockSize + 2}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "startPixels"
@@ -25,7 +29,7 @@ function Animation({ sprites }) {
       "#binary-0-2, #binary-1-2",
       {
         y: `+=${blockSize * 2 + 4}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "startPixels"
@@ -34,7 +38,7 @@ function Animation({ sprites }) {
       "#binary-0-3, #binary-1-3",
       {
         y: `+=${blockSize * 3 + 6}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "startPixels"
@@ -45,7 +49,7 @@ function Animation({ sprites }) {
       "#binary-0-0",
       {
         x: `+=${blockSize * 3 + 1}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "secondPixels"
@@ -54,7 +58,7 @@ function Animation({ sprites }) {
       "#binary-1-0",
       {
         x: `+=${-1}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "secondPixels"
@@ -63,7 +67,7 @@ function Animation({ sprites }) {
       "#binary-0-1",
       {
         x: `+=${blockSize * 2 + 1}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "secondPixels"
@@ -72,7 +76,7 @@ function Animation({ sprites }) {
       "#binary-0-2",
       {
         x: `+=${blockSize + 1}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "secondPixels"
@@ -81,7 +85,7 @@ function Animation({ sprites }) {
       "#binary-0-3",
       {
         x: `+=${1}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "secondPixels"
@@ -90,7 +94,7 @@ function Animation({ sprites }) {
       "#binary-1-1",
       {
         x: `+=${-blockSize - 1}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "secondPixels"
@@ -99,7 +103,7 @@ function Animation({ sprites }) {
       "#binary-1-2",
       {
         x: `+=${-blockSize * 2 - 1}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "secondPixels"
@@ -108,7 +112,7 @@ function Animation({ sprites }) {
       "#binary-1-3",
       {
         x: `+=${-blockSize * 3 - 1}`,
-        duration: 0.5,
+        duration: 0.4,
         ease: "power1.inOut",
       },
       "secondPixels"
@@ -151,7 +155,9 @@ function Animation({ sprites }) {
       "colorPixels"
     );
 
-    tl.to({}, { duration: 0.5 });
+    tl.to({}, { duration: 0.2 });
+
+    tl.pause();
 
     return () => {
       tl.time(0);
@@ -163,8 +169,10 @@ function Animation({ sprites }) {
     const id = setInterval(() => {
       if (sprites) {
         setOffset((prev) => (prev < 63 ? prev + 1 : prev));
+        timeline.current.time(0);
+        timeline.current.play();
       }
-    }, 1000);
+    }, 5000);
 
     return () => clearInterval(id);
   }, [sprites]);
@@ -188,11 +196,15 @@ function Animation({ sprites }) {
           x={blockSize * 3}
           y={blockSize}
           value={((byte >> 4) & 0xf).toString(16).toUpperCase()}
+          opacity={0}
+          id="hex-0"
         />
         <BlockValue
           x={blockSize * 4 + 2}
           y={blockSize}
           value={(byte & 0xf).toString(16).toUpperCase()}
+          opacity={0}
+          id="hex-1"
         />
       </g>
       <g transform={`translate(0, ${blockSize * 6})`}>
@@ -221,6 +233,7 @@ function BlockValue({
   width = blockSize,
   blockColor = "#ddd",
   textColor = "#333",
+  opacity = "1",
 }) {
   return (
     <g id={id} transform={`translate(${x}, ${y})`}>
@@ -238,6 +251,7 @@ function BlockValue({
         fill={textColor}
         textAnchor="middle"
         dominantBaseline="middle"
+        opacity={opacity}
       >
         {value ?? 0}
       </text>
@@ -254,16 +268,21 @@ function Nibble({ x = 0, y = 0, id, value }) {
         id={`${id}-${i}`}
         key={i}
         value={(value >> (3 - i)) & 1}
+        opacity={0}
       />
     );
   }
 
-  return <g transform={`translate(${x}, ${y})`}>{children}</g>;
+  return (
+    <g transform={`translate(${x}, ${y})`} id={id}>
+      {children}
+    </g>
+  );
 }
 
 function Byte({ x = 0, y = 0, id, value }) {
   return (
-    <g transform={`translate(${x}, ${y})`}>
+    <g transform={`translate(${x}, ${y})`} id={id}>
       <Nibble id={`${id}-${0}`} value={(value >> 4) & 0xf} />
       <Nibble id={`${id}-${1}`} x={blockSize * 4 + 2} value={value & 0xf} />
     </g>
